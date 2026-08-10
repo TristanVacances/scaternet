@@ -19,8 +19,8 @@ unreadable ska catastrophe:
 🎷 Every word becomes scat gibberish — "skabidibi doubidou bada boudi booo da bi
     doo bi do baaaba" — in wildly varied sizes, fonts and RANDOM CAPS, sprinkled
     with jazz emoji.
-🎸 Every image becomes a jazz-ska cartoon — dreadlocked pork-pie-hatted sax
-    players, dancing instruments, and the odd googly-eyed poop.
+🎸 Every image becomes a jazz-ska musician — ultra-realistic photos of
+    dreadlocked, pork-pie-hatted sax players, trumpeters and bassists.
 🥁 Every page plays music — a bed of ska, layered scat vocals and honking sax
     solos, all looping over each other.
 💨 Every mouse click makes a noise — a scat syllable, or one of dozens of farts.
@@ -61,5 +61,5 @@ chrome.storage.
 - Broad host access is inherent to the product: a "make every page silly" novelty
   must run on every page. It has NO host_permissions and makes NO fetches — all
   content is bundled at the extension origin.
-- Contains crude cartoon humour (cartoon poop characters, fart sounds). No nudity
-  or sexual content. All imagery is cartoon/illustration.
+- Contains crude humour (fart sounds, brown "mud" stain overlays). No nudity or
+  sexual content. Imagery is AI-generated photorealistic musicians (owned assets).

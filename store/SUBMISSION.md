@@ -49,10 +49,10 @@ every field value.
 - **Broad host access** — justified in the listing; the extension has NO
   `host_permissions` and makes NO network requests, which is the strongest
   possible framing.
-- **Crude humour** — cartoon poop characters + fart sounds. No nudity/sexual
+- **Crude humour** — fart sounds + brown "mud" stain overlays. No nudity/sexual
   content (the "bum" image variants were auto-rejected by the generator's own
   NSFW filter and were dropped, so none shipped). If a reviewer objects to crude
-  content, it's cosmetic to swap the poop images out and resubmit.
+  content, it's cosmetic to swap a stain or image out and resubmit.
 
 ## Updating later
 1. Bump `version` in `manifest.json`. 2. `./tools/package.sh`. 3. Upload the new
