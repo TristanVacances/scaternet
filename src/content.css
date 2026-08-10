@@ -30,8 +30,8 @@ img[data-scaternet-swapped="1"] {
 }
 #scaternet-stains img.scaternet-stain {
   position: absolute;
-  /* multiply blends the stain into the page (and hides any white cutout fringe). */
-  mix-blend-mode: multiply;
+  /* PNGs have a REAL transparent surround (white keyed out), so a plain overlay
+     works on any background — no blend-mode dependency, no white box. */
   will-change: transform;
   max-width: none;
 }

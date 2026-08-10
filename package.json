@@ -8,7 +8,7 @@
     "test:unit": "node --test tests/scatify-text.test.mjs tests/assets.test.mjs",
     "test:e2e": "node --test tests/e2e.test.mjs",
     "test": "node --test tests/scatify-text.test.mjs tests/assets.test.mjs tests/e2e.test.mjs",
-    "assets": "./.venv/bin/python tools/make_icons.py && ./.venv/bin/python tools/fetch_farts.py && ./.venv/bin/python tools/synth_farts.py && ./.venv/bin/python tools/fetch_ska.py && node tools/build_manifests.mjs",
+    "assets": "./.venv/bin/python tools/make_icons.py && ./.venv/bin/python tools/fetch_farts.py && ./.venv/bin/python tools/synth_farts.py && ./.venv/bin/python tools/fetch_ska.py && ./.venv/bin/python tools/dewhite_stains.py && node tools/build_manifests.mjs",
     "build": "npm run assets && ./tools/package.sh"
   },
   "devDependencies": {
