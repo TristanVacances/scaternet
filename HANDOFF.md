@@ -9,16 +9,16 @@ Third in the joke-extension line after CHIENTERNET (shipped) and RIGOLOL (shippe
 
 ## What it does
 Toolbar toggle ON → every page becomes a ska/scat catastrophe: text → scat
-gibberish (varied size/font/CAPS + jazz emoji), images → 46 jazz×ska cartoon
-hybrids (+ googly-eyed poops), continuous layered ska+scat+sax audio (starts on
+gibberish (varied size/font/CAPS + jazz emoji), images → 36 ultra-photorealistic jazz×ska musician
+hybrids, continuous layered ska+scat+sax audio (starts on
 first click), a scat/fart sound on every click, a ska track layered over every
 video (NOT muted — deliberate cacophony), and brown stains scattered on the page.
 Popup = ON/OFF + volume + mute-all + layer-over-videos. Toggle off restores in place.
 
 ## Verified (ran it, not "should work")
 - `npm test` → **34/34 green**, run twice:
-  - 16 text-engine unit (scat determinism, whitespace, token layer: size/font/CAPS/emoji)
-  - 6 asset-integrity (46 images + 8 scats + 28 farts + 5 music stems exist & wired;
+  - 16 text-engine unit (scat determinism, whitespace, token layer: size/CAPS/emoji)
+  - 6 asset-integrity (36 images + 8 scats + 28 farts + 5 music stems exist & wired;
     load order; storage-only; no host_permissions; icons)
   - 12 Playwright e2e on the REAL unpacked extension (channel:"chromium"): image +
     CSS-bg + poster swap, text→scat spans, title, **brown stains present**, form/
@@ -27,15 +27,18 @@ Popup = ON/OFF + volume + mute-all + layer-over-videos. Toggle off restores in p
     (text + images + title + stains gone), **bundled image paints under a real
     img-src 'self' CSP**.
 - Visual proof: `store/screenshots/hero-scatified.png` — the joke lands (varied
-  scat text, jazz-ska cartoons, brown stains).
-- `scaternet-v1.0.0.zip` builds (3.8 MB, runtime files only, manifest valid,
-  46 images + 41 audio clips).
+  scat text in the page's own font, photoreal jazz-ska musicians, solid mud stains).
+- `scaternet-v1.0.0.zip` builds (6.3 MB, runtime files only, manifest valid,
+  36 images + 41 audio clips).
 
 ## Assets (how they were made)
-- **Images (46):** Higgsfield `z_image` batch, 1:1, flat cartoon jazz×ska hybrids +
-  poops. Downscaled to 512px jpg (`sips`). Job IDs/URLs in `.genjobs/`. 3 "bum"
-  variants were auto-rejected by Higgsfield's NSFW filter and dropped (the
-  store-risky ones — good). Index 19 lost to a bookkeeping slip; 46 is plenty.
+- **Images (36) — ULTRA-PHOTOREALISTIC (Tristan revision):** Higgsfield
+  `recraft_v4_1` (standard, 2k), 1:1, single-shot jazz×ska musician photos +
+  a few instrument still-lifes. Downscaled to 640px jpg (`sips`). Job IDs/URLs in
+  `.genjobs/photoreal-*.tsv`. **All cartoons + poop/bum variants removed.**
+  `soul_cast` was tried first but returns character TURNAROUND SHEETS (front/back/
+  face, grey studio, no props) — rejected; recraft single-shot is the winner.
+  recraft has a **~30% per-job failure rate** — submitted ~46, ~36 succeeded.
 - **Scat audio:** Higgsfield `seed_audio` (TTS reading scat onomatopoeia). 2 long
   loops → `assets/audio/music/` (continuous vocal layer), 8 short → `assets/audio/
   scats/` (click one-shots).
@@ -56,10 +59,14 @@ Popup = ON/OFF + volume + mute-all + layer-over-videos. Toggle off restores in p
   so no CORS dependency — a separate bundled `<audio>` plays over the video.
 - **Music + clicks are top-frame only** so ad-iframe-heavy pages don't spawn 20
   overlapping loops. Video-layering runs in all frames.
-- **Text is element-replacement** (spans with size/font/CAPS classes + emoji), not
-  in-place `nodeValue` — with an `isOurs()` guard so the MutationObserver never
-  re-scatifies our own scat or the stains.
-- **z_image rate-limits** at ~9–10 concurrent submissions (429); submit in waves.
+- **Text is element-replacement** (spans with size/CAPS classes + emoji; **fonts
+  are NOT swapped** — page keeps its own font, per Tristan), not in-place
+  `nodeValue` — with an `isOurs()` guard so the MutationObserver never re-scatifies
+  our own scat or the stains.
+- **Stains = solid mud** (per Tristan): solid brown blobs + box-shadow splatter
+  satellites, per-stain random blob border-radius, multiply blend. NOT the old blur.
+- **Image models: z_image rate-limits ~9–10 concurrent; recraft_v4_1 ~30% fail
+  rate but far more photoreal.** Submit in waves and reconcile failed counts.
 - Default volume 0.5 (several stems layer). Volume slider + mute switch in popup.
 
 ## Next (Tristan's step — gated on money + outward publish)
