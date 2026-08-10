@@ -1,0 +1,49 @@
+{
+  "manifest_version": 3,
+  "name": "SCATERNET",
+  "version": "1.0.0",
+  "description": "The internet, on ska. Every page becomes scat gibberish, jazz-ska hybrids, and terrible skanking music. Skabidibi.",
+  "icons": {
+    "16": "assets/icons/icon-16.png",
+    "32": "assets/icons/icon-32.png",
+    "48": "assets/icons/icon-48.png",
+    "128": "assets/icons/icon-128.png"
+  },
+  "action": {
+    "default_title": "SCATERNET — toggle skat mode",
+    "default_popup": "src/popup.html",
+    "default_icon": {
+      "16": "assets/icons/icon-16.png",
+      "32": "assets/icons/icon-32.png",
+      "48": "assets/icons/icon-48.png",
+      "128": "assets/icons/icon-128.png"
+    }
+  },
+  "background": {
+    "service_worker": "src/background.js"
+  },
+  "permissions": ["storage"],
+  "content_scripts": [
+    {
+      "matches": ["<all_urls>"],
+      "js": [
+        "src/state.js",
+        "src/scatify-text.js",
+        "src/images-manifest.js",
+        "src/swap-images.js",
+        "src/audio-manifest.js",
+        "src/scat-audio.js",
+        "src/content.js"
+      ],
+      "css": ["src/content.css"],
+      "run_at": "document_idle",
+      "all_frames": true
+    }
+  ],
+  "web_accessible_resources": [
+    {
+      "resources": ["assets/images/*", "assets/audio/*"],
+      "matches": ["<all_urls>"]
+    }
+  ]
+}

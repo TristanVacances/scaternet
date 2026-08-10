@@ -1,0 +1,17 @@
+{
+  "name": "scaternet",
+  "version": "1.0.0",
+  "private": true,
+  "description": "The internet, on ska — a joke Chrome extension.",
+  "type": "module",
+  "scripts": {
+    "test:unit": "node --test tests/scatify-text.test.mjs tests/assets.test.mjs",
+    "test:e2e": "node --test tests/e2e.test.mjs",
+    "test": "node --test tests/scatify-text.test.mjs tests/assets.test.mjs tests/e2e.test.mjs",
+    "assets": "./.venv/bin/python tools/make_icons.py && ./.venv/bin/python tools/fetch_farts.py && ./.venv/bin/python tools/synth_farts.py && ./.venv/bin/python tools/fetch_ska.py && node tools/build_manifests.mjs",
+    "build": "npm run assets && ./tools/package.sh"
+  },
+  "devDependencies": {
+    "playwright": "^1.49.0"
+  }
+}
