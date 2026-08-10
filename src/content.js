@@ -64,7 +64,8 @@
         wrapper.appendChild(e);
       } else {
         const w = document.createElement("span");
-        w.className = "scaternet-word scat-size-" + tk.size + " scat-font-" + tk.font;
+        // Keep the page's own font (Tristan) — only vary size. No font-family swap.
+        w.className = "scaternet-word scat-size-" + tk.size;
         w.textContent = tk.text;
         wrapper.appendChild(w);
       }
@@ -115,16 +116,22 @@
     const c = document.createElement("div");
     c.id = "scaternet-stains";
     const count = 12 + Math.floor(Math.random() * 10);
+    const rnd = (lo, hi) => (lo + Math.random() * (hi - lo)).toFixed(0);
     for (let i = 0; i < count; i++) {
       const s = document.createElement("div");
       s.className = "scaternet-stain";
-      const size = 60 + Math.random() * 220;
+      const size = 70 + Math.random() * 240;
       s.style.width = size.toFixed(0) + "px";
-      s.style.height = (size * (0.65 + Math.random() * 0.6)).toFixed(0) + "px";
+      s.style.height = (size * (0.6 + Math.random() * 0.7)).toFixed(0) + "px";
       s.style.left = (Math.random() * 100).toFixed(1) + "vw";
       s.style.top = (Math.random() * 100).toFixed(1) + "vh";
       s.style.transform = "rotate(" + (Math.random() * 360).toFixed(0) + "deg)";
-      s.style.opacity = (0.32 + Math.random() * 0.4).toFixed(2);
+      // Solid, not a faint wash — real mud.
+      s.style.opacity = (0.6 + Math.random() * 0.35).toFixed(2);
+      // Per-stain organic blob outline so no two mud splats look alike.
+      s.style.borderRadius =
+        rnd(30, 70) + "% " + rnd(30, 70) + "% " + rnd(30, 70) + "% " + rnd(30, 70) + "% / " +
+        rnd(30, 70) + "% " + rnd(30, 70) + "% " + rnd(30, 70) + "% " + rnd(30, 70) + "%";
       c.appendChild(s);
     }
     host.appendChild(c);

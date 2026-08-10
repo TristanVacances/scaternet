@@ -117,9 +117,12 @@ test("SCATERNET transforms a page and restores it", async (t) => {
       const wordCount = await page.evaluate(() => document.querySelectorAll(".scaternet-word").length);
       assert.ok(wordCount > 0, "no .scaternet-word spans");
       const hasSize = await page.evaluate(
-        () => !!document.querySelector('[class*="scat-size-"]') && !!document.querySelector('[class*="scat-font-"]')
+        () => !!document.querySelector('[class*="scat-size-"]')
       );
-      assert.ok(hasSize, "scat spans missing size/font classes");
+      assert.ok(hasSize, "scat spans missing size classes");
+      // Fonts are intentionally NOT swapped — no scat-font-* classes should exist.
+      const hasFont = await page.evaluate(() => !!document.querySelector('[class*="scat-font-"]'));
+      assert.equal(hasFont, false, "font classes should be gone (page keeps its own font)");
     });
 
     await t.test("document title is scatified", async () => {
