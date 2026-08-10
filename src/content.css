@@ -20,7 +20,7 @@ img[data-scaternet-swapped="1"] {
 .scat-size-lg { font-size: 1.5em !important; }
 .scat-size-xl { font-size: 2.2em !important; }
 
-/* --- Brown stains: solid mud spreads splattered all over the page --- */
+/* --- Brown stains: real photographic mud/poo splatter PNGs scattered around --- */
 #scaternet-stains {
   position: fixed;
   inset: 0;
@@ -28,17 +28,10 @@ img[data-scaternet-swapped="1"] {
   pointer-events: none;
   overflow: hidden;
 }
-#scaternet-stains .scaternet-stain {
+#scaternet-stains img.scaternet-stain {
   position: absolute;
-  background-color: #4a2c14; /* solid mud brown */
-  /* organic blobby outline (per-stain border-radius is overridden inline in JS) */
-  border-radius: 42% 58% 63% 37% / 45% 44% 56% 55%;
-  /* satellite splats + a darker rim = mud splatter, NOT a soft blur */
-  box-shadow:
-    inset 0 0 0 6px rgba(40, 22, 8, 0.35),
-    22px 12px 0 -8px #5b3a1a,
-    -18px 18px 0 -10px #3a220e,
-    30px -14px 0 -12px #4a2c14,
-    -26px -12px 0 -13px #5b3a1a;
+  /* multiply blends the stain into the page (and hides any white cutout fringe). */
   mix-blend-mode: multiply;
+  will-change: transform;
+  max-width: none;
 }

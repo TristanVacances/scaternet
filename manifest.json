@@ -33,6 +33,7 @@
         "src/swap-images.js",
         "src/audio-manifest.js",
         "src/scat-audio.js",
+        "src/stains-manifest.js",
         "src/content.js"
       ],
       "css": ["src/content.css"],
@@ -42,7 +43,7 @@
   ],
   "web_accessible_resources": [
     {
-      "resources": ["assets/images/*", "assets/audio/*"],
+      "resources": ["assets/images/*", "assets/stains/*", "assets/audio/*"],
       "matches": ["<all_urls>"]
     }
   ]

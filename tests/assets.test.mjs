@@ -35,6 +35,16 @@ test("bundled images: manifest lists real image files", () => {
   }
 });
 
+test("bundled stains: manifest lists real transparent-splatter PNGs", () => {
+  const { ScaternetStainsList } = runGlobals("src/stains-manifest.js");
+  assert.ok(Array.isArray(ScaternetStainsList), "ScaternetStainsList should be an array");
+  assert.ok(ScaternetStainsList.length >= 3, `too few stains: ${ScaternetStainsList.length}`);
+  for (const f of ScaternetStainsList) {
+    assert.match(f, /\.(png|webp)$/i, `unexpected stain name: ${f}`);
+    assert.ok(existsSync(join(ROOT, "assets", "stains", f)), `missing stain file: ${f}`);
+  }
+});
+
 test("bundled audio: scats + farts manifests list real files", () => {
   const { ScaternetAudioAssets } = runGlobals("src/audio-manifest.js");
   assert.ok(ScaternetAudioAssets && typeof ScaternetAudioAssets === "object");
@@ -53,18 +63,20 @@ test("manifest.json wires content scripts in the right load order", () => {
   const js = manifest.content_scripts[0].js;
   for (const f of [
     "src/state.js", "src/scatify-text.js", "src/images-manifest.js", "src/swap-images.js",
-    "src/audio-manifest.js", "src/scat-audio.js", "src/content.js",
+    "src/audio-manifest.js", "src/scat-audio.js", "src/stains-manifest.js", "src/content.js",
   ]) {
     assert.ok(js.includes(f), `content_scripts missing ${f}`);
   }
   assert.ok(js.indexOf("src/images-manifest.js") < js.indexOf("src/swap-images.js"));
   assert.ok(js.indexOf("src/audio-manifest.js") < js.indexOf("src/scat-audio.js"));
   assert.ok(js.indexOf("src/scatify-text.js") < js.indexOf("src/content.js"));
+  assert.ok(js.indexOf("src/stains-manifest.js") < js.indexOf("src/content.js"));
 });
 
 test("manifest.json exposes images and audio as web-accessible", () => {
   const res = manifest.web_accessible_resources.flatMap((r) => r.resources);
   assert.ok(res.includes("assets/images/*"), "images not web-accessible");
+  assert.ok(res.includes("assets/stains/*"), "stains not web-accessible");
   assert.ok(res.includes("assets/audio/*"), "audio not web-accessible");
 });
 

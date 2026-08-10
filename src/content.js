@@ -107,32 +107,35 @@
     }
   }
 
-  // ---- brown stains (top frame only; a fixed overlay) ----
+  // ---- brown stains (top frame only): real splatter PNGs scattered around ----
+  function stainURL(file) {
+    try { return chrome.runtime.getURL("assets/stains/" + file); }
+    catch (_e) { return "assets/stains/" + file; }
+  }
   function addStains() {
     if (!isTop) return;
     if (document.getElementById("scaternet-stains")) return;
+    const list = globalThis.ScaternetStainsList || [];
     const host = document.body || document.documentElement;
-    if (!host) return;
+    if (!host || list.length === 0) return;
     const c = document.createElement("div");
     c.id = "scaternet-stains";
-    const count = 12 + Math.floor(Math.random() * 10);
-    const rnd = (lo, hi) => (lo + Math.random() * (hi - lo)).toFixed(0);
+    const count = 14 + Math.floor(Math.random() * 12);
     for (let i = 0; i < count; i++) {
-      const s = document.createElement("div");
-      s.className = "scaternet-stain";
-      const size = 70 + Math.random() * 240;
-      s.style.width = size.toFixed(0) + "px";
-      s.style.height = (size * (0.6 + Math.random() * 0.7)).toFixed(0) + "px";
-      s.style.left = (Math.random() * 100).toFixed(1) + "vw";
-      s.style.top = (Math.random() * 100).toFixed(1) + "vh";
-      s.style.transform = "rotate(" + (Math.random() * 360).toFixed(0) + "deg)";
-      // Solid, not a faint wash — real mud.
-      s.style.opacity = (0.6 + Math.random() * 0.35).toFixed(2);
-      // Per-stain organic blob outline so no two mud splats look alike.
-      s.style.borderRadius =
-        rnd(30, 70) + "% " + rnd(30, 70) + "% " + rnd(30, 70) + "% " + rnd(30, 70) + "% / " +
-        rnd(30, 70) + "% " + rnd(30, 70) + "% " + rnd(30, 70) + "% " + rnd(30, 70) + "%";
-      c.appendChild(s);
+      const file = list[(Math.random() * list.length) | 0];
+      const img = document.createElement("img");
+      img.className = "scaternet-stain";
+      img.setAttribute("alt", "");
+      img.src = stainURL(file); // set before insertion so the observer never sees a swap-eligible img
+      const w = 130 + Math.random() * 380;
+      img.style.width = w.toFixed(0) + "px";
+      img.style.left = (Math.random() * 100).toFixed(1) + "vw";
+      img.style.top = (Math.random() * 100).toFixed(1) + "vh";
+      const rot = (Math.random() * 360).toFixed(0);
+      const flip = Math.random() < 0.5 ? -1 : 1;
+      img.style.transform = "translate(-40%,-40%) rotate(" + rot + "deg) scaleX(" + flip + ")";
+      img.style.opacity = (0.7 + Math.random() * 0.3).toFixed(2);
+      c.appendChild(img);
     }
     host.appendChild(c);
   }
