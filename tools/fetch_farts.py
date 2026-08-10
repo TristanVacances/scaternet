@@ -19,12 +19,21 @@ ROOT = Path(__file__).resolve().parent.parent
 OUT = ROOT / "assets" / "audio" / "farts"
 SOURCES = OUT / "SOURCES.md"
 
-TARGET = 40  # aim high — widest spectrum
+TARGET = 30  # aim high — widest spectrum
 UA = "scaternet/1.0 (personal joke extension; CC0 fart sounds)"
 QUERIES = [
-    "fart", "farting", "wet fart", "raspberry sound blow", "flatulence",
-    "fart squeak", "long fart", "squelch fart", "poot", "fart bubble",
+    "fart", "farting", "wet fart", "dry fart", "squeaky fart", "long fart",
+    "fart brap", "whoopee cushion", "bottom burp", "sputter fart", "fart bubble",
+    "flatulence", "raspberry blow",
 ]
+
+# Openverse indexes a lot of Wiktionary/Lingua-Libre audio: those are PEOPLE saying
+# the word "fart", not fart SOUNDS. Reject them.
+def is_pronunciation(r):
+    title = (r.get("title") or "").lower()
+    creator = (r.get("creator") or "").lower()
+    return (title.startswith("ll-q") or "pronunciation" in title
+            or "lingua libre" in title or "lingua libre" in creator)
 MIN_MS, MAX_MS = 120, 4000  # keep short blips AND longer trumpets for variety
 
 # Gentle: strip only leading/trailing silence, cap at 3.5s, fade tail, normalise.
@@ -45,8 +54,10 @@ def curl(url, timeout=30):
 
 def main():
     OUT.mkdir(parents=True, exist_ok=True)
+    # Only clear the CC0 fart-NN files — NOT the synth fart-syn-* (glob overlaps).
     for old in OUT.glob("fart-*.mp3"):
-        old.unlink()
+        if not old.name.startswith("fart-syn"):
+            old.unlink()
 
     files, sources, seen = [], [], set()
     idx = 0
@@ -73,6 +84,8 @@ def main():
                 url = r.get("url")
                 rid = r.get("id")
                 if not url or rid in seen or not (MIN_MS <= dur <= MAX_MS):
+                    continue
+                if is_pronunciation(r):
                     continue
                 seen.add(rid)
                 try:

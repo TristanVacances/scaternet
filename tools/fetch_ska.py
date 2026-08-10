@@ -19,16 +19,19 @@ OUT = ROOT / "assets" / "audio" / "music"
 SOURCES = OUT / "SOURCES.md"
 UA = "scaternet/1.0 (personal joke extension; CC0 music loops)"
 
-# (prefix, query, target, min_ms, max_ms)
+# (prefix, query, target, min_ms, max_ms) — prefer LONGER clips so the bed loops
+# less obviously; trumpet section added per Tristan.
 SETS = [
-    ("ska", "ska", 3, 3000, 30000),
-    ("ska", "reggae skank guitar", 2, 2000, 30000),
-    ("sax", "saxophone riff", 2, 1500, 20000),
-    ("sax", "saxophone solo", 1, 1500, 20000),
+    ("ska", "ska instrumental", 3, 8000, 70000),
+    ("ska", "reggae skank guitar", 2, 5000, 70000),
+    ("sax", "saxophone riff", 2, 3000, 45000),
+    ("sax", "saxophone solo", 1, 3000, 45000),
+    ("tpt", "trumpet riff", 2, 2000, 45000),
+    ("tpt", "trumpet fanfare", 2, 1500, 45000),
 ]
 
-# Loops: just cap length + loudness-normalise, keep them long enough to loop.
-FFMPEG_FILTER = "atrim=0:20,afade=t=out:st=19.4:d=0.6,loudnorm=I=-16:TP=-1.5:LRA=11"
+# Loops: cap at 40s + loudness-normalise, keep them long enough to loop.
+FFMPEG_FILTER = "atrim=0:40,afade=t=out:st=39.4:d=0.6,loudnorm=I=-16:TP=-1.5:LRA=11"
 
 
 def curl(url, timeout=45):
@@ -41,11 +44,11 @@ def curl(url, timeout=45):
 
 def main():
     OUT.mkdir(parents=True, exist_ok=True)
-    for old in list(OUT.glob("ska-*.mp3")) + list(OUT.glob("sax-*.mp3")):
+    for old in list(OUT.glob("ska-*.mp3")) + list(OUT.glob("sax-*.mp3")) + list(OUT.glob("tpt-*.mp3")):
         old.unlink()
 
     files, sources, seen = [], [], set()
-    counters = {"ska": 0, "sax": 0}
+    counters = {"ska": 0, "sax": 0, "tpt": 0}
     for prefix, q, target, mn, mx in SETS:
         got = 0
         page = 1

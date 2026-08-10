@@ -1,11 +1,12 @@
 #!/usr/bin/env python3
-"""Synthesize a WIDE spectrum of cartoon fart noises with ffmpeg.
+"""Synthesize a WIDE spectrum of REALISTIC fart noises with ffmpeg.
 
-CC0 fart SFX are scarce, so we manufacture our own: a low buzzy tone whose pitch
-wobbles (vibrato) and bends over a short decaying envelope = a brap. Sweeping the
-base pitch, wobble rate, bend direction, duration and grit gives dozens of
-distinct farts (wet, dry, squeaky, long, machine-gun, sputtering). These OWN
-assets bundle freely.
+Real farts are not tones — they're brown noise forced through a small resonant
+cavity with rapid pitch + amplitude flutter (the "brrrap"). So we build each one:
+  brown noise -> resonant bandpass + resonance boost -> vibrato (pitch flutter)
+  -> tremolo (amplitude flutter) -> decay -> loudness-normalise.
+Sweeping centre freq / resonance / flutter rate / length gives wet, dry, squeaky,
+long, sputtering and machine-gun farts. Owned assets, bundle freely.
 
 Outputs: assets/audio/farts/fart-syn-NN.mp3
 Run:  ./.venv/bin/python tools/synth_farts.py   (needs ffmpeg)
@@ -18,49 +19,53 @@ ROOT = Path(__file__).resolve().parent.parent
 OUT = ROOT / "assets" / "audio" / "farts"
 FFMPEG = "ffmpeg"
 
-# (base_hz, wobble_hz, bend, dur, decay, grit)  -> one distinct fart each
+# (centre_hz, bandwidth, resonance_gain, flutter_hz, dur, amp) -> one distinct fart
 VARIANTS = [
-    (90, 18, 0, 0.45, 4.0, 0.10),   # classic mid brap
-    (70, 12, -30, 0.70, 2.6, 0.12),  # long low decline
-    (130, 26, 20, 0.30, 5.0, 0.06),  # squeaky rise
-    (60, 9, -20, 0.90, 2.0, 0.15),   # deep long
-    (110, 30, 0, 0.35, 4.5, 0.20),   # gritty buzz
-    (100, 16, 40, 0.40, 4.0, 0.08),  # rising toot
-    (80, 22, -10, 0.55, 3.2, 0.14),  # wet mid
-    (140, 34, 30, 0.25, 6.0, 0.05),  # tiny squeak
-    (75, 14, 0, 0.65, 2.8, 0.18),    # flappy
-    (95, 20, -40, 0.50, 3.6, 0.10),  # descending brap
-    (65, 11, 10, 0.80, 2.2, 0.16),   # rumbling
-    (120, 28, -20, 0.32, 5.2, 0.09),  # pinched
-    (85, 24, 50, 0.42, 3.8, 0.22),   # sputter-rise
-    (105, 17, -15, 0.48, 4.0, 0.11),  # honky mid
-    (72, 13, -25, 0.75, 2.5, 0.13),  # long wet decline
-    (135, 32, 25, 0.28, 5.5, 0.07),  # squeaky short
+    (150, 90, 10, 22, 0.55, 0.9),    # classic wet mid brap
+    (110, 70, 12, 16, 0.85, 0.9),    # long low wet
+    (240, 120, 8, 34, 0.32, 0.85),   # squeaky short
+    (95, 60, 13, 12, 1.05, 0.9),     # deep long rumble
+    (180, 100, 11, 40, 0.40, 0.9),   # machine-gun flutter
+    (130, 80, 10, 26, 0.60, 0.9),    # standard wet
+    (300, 140, 7, 44, 0.28, 0.8),    # tiny squeak
+    (120, 70, 12, 18, 0.75, 0.9),    # flappy medium
+    (160, 90, 10, 30, 0.48, 0.9),    # sputter
+    (100, 65, 13, 14, 0.95, 0.9),    # long wet decline
+    (210, 110, 9, 38, 0.35, 0.85),   # pinched high
+    (140, 85, 11, 24, 0.65, 0.9),    # honky mid
+    (115, 72, 12, 20, 0.80, 0.9),    # gassy long
+    (260, 130, 8, 42, 0.30, 0.8),    # squeaky rapid
+    (125, 78, 11, 28, 0.55, 0.9),    # bubbly mid
+    (105, 68, 13, 15, 1.10, 0.9),    # very long deep
+    (190, 100, 10, 36, 0.42, 0.88),  # brassy sputter
+    (135, 82, 11, 21, 0.70, 0.9),    # wet flap
+    (155, 92, 10, 45, 0.38, 0.9),    # rapid machine-gun
+    (170, 95, 10, 25, 0.58, 0.9),    # meaty mid
 ]
 
 
-def synth(idx, base, wob, bend, dur, decay, grit):
-    # Frequency = base + vibrato + linear bend over time.
-    # A square-ish tone (sum of a few harmonics) reads as "brap"; add noise grit.
-    freq = f"({base}+{wob}*sin(2*PI*t*{wob})+{bend}*t/{dur})"
-    tone = (f"0.6*sin(2*PI*t*{freq})"
-            f"+0.3*sin(4*PI*t*{freq})"
-            f"+0.15*sin(6*PI*t*{freq})")
-    env = f"exp(-{decay}*t)"
-    expr = f"({tone}+{grit}*random(0))*{env}"
+def synth(idx, centre, bw, res, flutter, dur, amp):
+    src = f"anoisesrc=color=brown:amplitude={amp}:duration={dur}:sample_rate=44100"
+    fade_st = max(0.02, dur - 0.12)
+    af = (
+        f"bandpass=f={centre}:width_type=h:w={bw},"
+        f"equalizer=f={centre}:width_type=q:width=1.2:g={res},"
+        f"vibrato=f={flutter}:d=0.6,"
+        f"tremolo=f={flutter}:d=0.85,"
+        # gentle exponential-ish decay so it dies like a real one
+        f"afade=t=in:st=0:d=0.015,afade=t=out:st={fade_st:.2f}:d=0.12,"
+        f"loudnorm=I=-14:TP=-1.2:LRA=11"
+    )
     out = OUT / f"fart-syn-{idx:02d}.mp3"
-    src = f"aevalsrc={expr}:d={dur}:s=44100"
-    # gentle fade tail + loudness normalise so they sit with the CC0 farts
-    af = f"afade=t=out:st={max(0.02, dur-0.08):.2f}:d=0.08,loudnorm=I=-15:TP=-1.5:LRA=11"
     r = subprocess.run(
         [FFMPEG, "-y", "-f", "lavfi", "-i", src, "-af", af,
-         "-ac", "1", "-ar", "44100", "-b:a", "96k", str(out)],
+         "-ac", "1", "-ar", "44100", "-b:a", "112k", str(out)],
         capture_output=True,
     )
     if r.returncode != 0 or not out.exists() or out.stat().st_size < 500:
         print(f"  ✗ fart-syn-{idx:02d} failed: {r.stderr.decode()[-160:]}")
         return False
-    print(f"  ✓ fart-syn-{idx:02d}.mp3  base={base} wob={wob} bend={bend} dur={dur}")
+    print(f"  ✓ fart-syn-{idx:02d}.mp3  centre={centre} flutter={flutter} dur={dur}")
     return True
 
 
@@ -72,7 +77,7 @@ def main():
     for i, v in enumerate(VARIANTS, 1):
         if synth(i, *v):
             n += 1
-    print(f"\nSynthesized {n} farts -> {OUT}")
+    print(f"\nSynthesized {n} realistic farts -> {OUT}")
 
 
 if __name__ == "__main__":

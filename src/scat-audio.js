@@ -33,6 +33,7 @@
   const scatStems = []; // the vocal-scat stems (get the big swell)
   let swellTimer = null;
   let swellStep = 0;
+  let trumpetTimer = null;
   let fartTimer = null;
 
   // Farts should hit as hard as the sax — punchy, near the top of the mix.
@@ -135,7 +136,7 @@
         const el = new Audio(url);
         el.loop = true;
         const isVocal = /scatvox/i.test(url); // the scat-singing stems
-        el.volume = isVocal ? volume * 0.06 : Math.max(0, Math.min(1, volume));
+        el.volume = isVocal ? Math.min(0.85, volume * 0.55) : Math.max(0, Math.min(1, volume));
         const p = el.play();
         if (p && typeof p.catch === "function") p.catch(() => {});
         musicEls.push(el);
@@ -145,6 +146,7 @@
     }
     if (!anyStarted) startSynthSka();
     if (scatStems.length) startScatSwell();
+    startTrumpet();
     scheduleFarts();
   }
 
@@ -153,17 +155,18 @@
   function startScatSwell() {
     if (swellTimer) return;
     swellStep = 0;
-    const CYCLE = 72; // ticks (~7.2s) per swell
+    const CYCLE = 100; // ticks (~10s) per swell
     swellTimer = setInterval(() => {
       if (!running || muted || scatStems.length === 0) return;
       const phase = (swellStep % CYCLE) / CYCLE; // 0..1
+      // ~0.4s ramp up, 3s hold at MAX (distort), ~0.8s fall, then baseline.
       let env;
-      if (phase < 0.1) env = phase / 0.1;              // fast blast up
-      else if (phase < 0.2) env = 1;                    // hold — way too loud
-      else if (phase < 0.36) env = 1 - (phase - 0.2) / 0.16; // fall back down
-      else env = 0;                                     // stay low, song audible
-      const peak = Math.min(1, volume * 2.2); // slam to the ceiling
-      const low = volume * 0.05;
+      if (phase < 0.04) env = phase / 0.04;               // blast up
+      else if (phase < 0.34) env = 1;                      // 3s hold — full ceiling
+      else if (phase < 0.42) env = 1 - (phase - 0.34) / 0.08; // fall
+      else env = 0;                                        // baseline, song audible
+      const peak = 1.0; // slam to the absolute ceiling — hot source + overlap = distortion
+      const low = Math.min(0.85, volume * 0.55); // baseline raised (was way too low)
       const v = Math.max(0, Math.min(1, low + (peak - low) * env));
       for (const el of scatStems) { try { el.volume = v; } catch (_e) {} }
       swellStep++;
@@ -174,10 +177,59 @@
     scatStems.length = 0;
   }
 
+  // ---- synth STACCATO TRUMPET sections (top frame): flurries of fast short
+  // bright notes, then a pause — layered over the bed for the "trumpet section"
+  // character Tristan asked for, and to keep the loop from feeling short. ----
+  const TRUMPET_SCALE = [392, 440, 494, 523, 587, 659, 698, 784, 880]; // G-ish
+  function trumpetNote(ac, t, dur, f) {
+    const osc = ac.createOscillator();
+    osc.type = "sawtooth";
+    osc.frequency.setValueAtTime(f, t);
+    const bp = ac.createBiquadFilter(); // brassy formant
+    bp.type = "bandpass";
+    bp.frequency.value = Math.min(3200, f * 3);
+    bp.Q.value = 6;
+    const g = ac.createGain();
+    const vol = 0.22 * volume;
+    g.gain.setValueAtTime(0.0001, t);
+    g.gain.exponentialRampToValueAtTime(vol + 0.001, t + 0.008); // sharp staccato attack
+    g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+    osc.connect(bp).connect(g).connect(ac.destination);
+    osc.start(t);
+    osc.stop(t + dur + 0.02);
+  }
+  function startTrumpet() {
+    if (!isTop || trumpetTimer) return;
+    const burst = () => {
+      if (!running) { trumpetTimer = null; return; }
+      const ac = getCtx();
+      if (!ac || ac.state !== "running" || muted) {
+        trumpetTimer = setTimeout(burst, 1200);
+        return;
+      }
+      const n = 6 + ((Math.random() * 10) | 0); // 6–15 fast notes
+      const noteLen = 0.06 + Math.random() * 0.06;
+      let t = ac.currentTime + 0.02;
+      for (let i = 0; i < n; i++) {
+        const f = TRUMPET_SCALE[(Math.random() * TRUMPET_SCALE.length) | 0] * (Math.random() < 0.25 ? 2 : 1);
+        trumpetNote(ac, t, noteLen, f);
+        t += noteLen * (0.85 + Math.random() * 0.35);
+      }
+      const flurryMs = (t - ac.currentTime) * 1000;
+      const pause = 1600 + Math.random() * 3800; // 1.6–5.4s rest between sections
+      trumpetTimer = setTimeout(burst, flurryMs + pause);
+    };
+    burst();
+  }
+  function stopTrumpet() {
+    if (trumpetTimer) { clearTimeout(trumpetTimer); trumpetTimer = null; }
+  }
+
   function stopMusic() {
     for (const el of musicEls) { try { el.pause(); } catch (_e) {} }
     musicEls = [];
     stopScatSwell();
+    stopTrumpet();
     stopSynthSka();
     if (fartTimer) { clearTimeout(fartTimer); fartTimer = null; }
   }

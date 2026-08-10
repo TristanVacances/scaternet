@@ -10,7 +10,7 @@
   const DEFAULTS = {
     enabled: false,
     muteAudio: false, // kill switch for all sound (page usable in polite company)
-    volume: 0.5, // master volume for music + scats + farts (0..1); several stems layer, so keep sane by default
+    volume: 0.7, // master volume for music + scats + farts (0..1); louder overall per Tristan
     layerOverVideos: true, // layer a ska track over videos (the intended cacophony)
   };
 

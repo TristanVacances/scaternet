@@ -3,9 +3,20 @@ globalThis.ScaternetAudioAssets = {
   "music": [
     "sax-01.mp3",
     "sax-02.mp3",
+    "sax-03.mp3",
     "scatvox-1.mp3",
     "scatvox-2.mp3",
-    "ska-01.mp3"
+    "scatvox-3.mp3",
+    "scatvox-4.mp3",
+    "scatvox-5.mp3",
+    "scatvox-6.mp3",
+    "ska-01.mp3",
+    "ska-02.mp3",
+    "ska-03.mp3",
+    "tpt-01.mp3",
+    "tpt-02.mp3",
+    "tpt-03.mp3",
+    "tpt-04.mp3"
   ],
   "video": [],
   "scats": [
@@ -46,6 +57,10 @@ globalThis.ScaternetAudioAssets = {
     "fart-syn-13.mp3",
     "fart-syn-14.mp3",
     "fart-syn-15.mp3",
-    "fart-syn-16.mp3"
+    "fart-syn-16.mp3",
+    "fart-syn-17.mp3",
+    "fart-syn-18.mp3",
+    "fart-syn-19.mp3",
+    "fart-syn-20.mp3"
   ]
 };
