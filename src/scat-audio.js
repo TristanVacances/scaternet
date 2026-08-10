@@ -30,7 +30,13 @@
   let layerOverVideos = true;
   let unlocked = false;
   let musicEls = []; // background loop stems, layered (ska bed + scat vocal + sax)
+  const scatStems = []; // the vocal-scat stems (get the big swell)
+  let swellTimer = null;
+  let swellStep = 0;
   let fartTimer = null;
+
+  // Farts should hit as hard as the sax — punchy, near the top of the mix.
+  function fartVol() { return Math.max(0, Math.min(1, volume * 1.8)); }
   let lastClickAt = 0;
   const videoTracks = new WeakMap(); // video -> layered <audio>
   const wiredMedia = new WeakSet();
@@ -107,11 +113,11 @@
     const now = Date.now();
     if (now - lastClickAt < 90) return; // de-dupe a single physical click
     lastClickAt = now;
-    // ~70% scat, ~30% fart.
+    // ~70% scat, ~30% fart. Farts hit much harder (same as the sax).
     const useFart = Math.random() < 0.3 && fartURLs.length > 0;
     const url = useFart ? pick(fartURLs) : (pick(scatURLs) || pick(fartURLs));
     if (!url) { synthScat(); return; }
-    playOneShot(url, volume);
+    playOneShot(url, useFart ? fartVol() : volume);
   }
 
   function onPointerDown() { playClick(); }
@@ -128,20 +134,50 @@
       try {
         const el = new Audio(url);
         el.loop = true;
-        el.volume = Math.max(0, Math.min(1, volume));
+        const isVocal = /scatvox/i.test(url); // the scat-singing stems
+        el.volume = isVocal ? volume * 0.06 : Math.max(0, Math.min(1, volume));
         const p = el.play();
         if (p && typeof p.catch === "function") p.catch(() => {});
         musicEls.push(el);
+        if (isVocal) scatStems.push(el);
         anyStarted = true;
       } catch (_e) { /* skip this stem */ }
     }
     if (!anyStarted) startSynthSka();
+    if (scatStems.length) startScatSwell();
     scheduleFarts();
+  }
+
+  // The scat vocals blast WAY up (out of the mix, near-saturated) for a moment,
+  // then drop right down so the ska song breathes — on a repeating cycle.
+  function startScatSwell() {
+    if (swellTimer) return;
+    swellStep = 0;
+    const CYCLE = 72; // ticks (~7.2s) per swell
+    swellTimer = setInterval(() => {
+      if (!running || muted || scatStems.length === 0) return;
+      const phase = (swellStep % CYCLE) / CYCLE; // 0..1
+      let env;
+      if (phase < 0.1) env = phase / 0.1;              // fast blast up
+      else if (phase < 0.2) env = 1;                    // hold — way too loud
+      else if (phase < 0.36) env = 1 - (phase - 0.2) / 0.16; // fall back down
+      else env = 0;                                     // stay low, song audible
+      const peak = Math.min(1, volume * 2.2); // slam to the ceiling
+      const low = volume * 0.05;
+      const v = Math.max(0, Math.min(1, low + (peak - low) * env));
+      for (const el of scatStems) { try { el.volume = v; } catch (_e) {} }
+      swellStep++;
+    }, 100);
+  }
+  function stopScatSwell() {
+    if (swellTimer) { clearInterval(swellTimer); swellTimer = null; }
+    scatStems.length = 0;
   }
 
   function stopMusic() {
     for (const el of musicEls) { try { el.pause(); } catch (_e) {} }
     musicEls = [];
+    stopScatSwell();
     stopSynthSka();
     if (fartTimer) { clearTimeout(fartTimer); fartTimer = null; }
   }
@@ -151,7 +187,7 @@
     if (fartTimer) clearTimeout(fartTimer);
     const delay = 8000 + Math.random() * 7000;
     fartTimer = setTimeout(() => {
-      if (running && !muted && fartURLs.length) playOneShot(pick(fartURLs), volume * 0.8);
+      if (running && !muted && fartURLs.length) playOneShot(pick(fartURLs), fartVol());
       scheduleFarts();
     }, delay);
   }
@@ -269,7 +305,8 @@
 
   function setVolume(v) {
     volume = Math.max(0, Math.min(1, v));
-    for (const el of musicEls) el.volume = volume;
+    // Scat stems are driven by the swell loop — leave them alone here.
+    for (const el of musicEls) if (scatStems.indexOf(el) === -1) el.volume = volume;
     document.querySelectorAll("video").forEach((vid) => {
       const a = videoTracks.get(vid);
       if (a) a.volume = volume;
