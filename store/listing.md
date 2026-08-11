@@ -4,10 +4,10 @@
 SCATERNET — the internet, on ska
 
 ## Summary (max 132 chars)
-Flip it on and every page turns into a ska/scat catastrophe: scat gibberish, jazz-ska cartoons, brown stains and terrible skanking music.
+Flip it on and every page becomes a ska/scat catastrophe: scat gibberish, jazz-ska musicians, brown stains and awful skanking music.
 
 ## Category
-Fun / Entertainment
+Just for Fun  (pick "Fun" / "Entertainment" / "Just for Fun" — whichever the dropdown shows)
 
 ## Language
 English
@@ -17,19 +17,19 @@ SCATERNET is a joke. Flip it on and the entire web turns into an unlistenable,
 unreadable ska catastrophe:
 
 🎷 Every word becomes scat gibberish — "skabidibi doubidou bada boudi booo da bi
-    doo bi do baaaba" — in wildly varied sizes, fonts and RANDOM CAPS, sprinkled
-    with jazz emoji.
+    doo bi do baaaba" — in wildly varied sizes and RANDOM CAPS, sprinkled with
+    jazz emoji.
 🎸 Every image becomes a jazz-ska musician — ultra-realistic photos of
     dreadlocked, pork-pie-hatted sax players, trumpeters and bassists.
-🥁 Every page plays music — a bed of ska, layered scat vocals and honking sax
-    solos, all looping over each other.
-💨 Every mouse click makes a noise — a scat syllable, or one of dozens of farts.
+🥁 Every page plays music — ska tracks back-to-back, with scat vocals swelling
+    in and out over the top.
+💨 Every mouse click makes a noise — and farts drop in at random.
 🎬 Every video gets a ska track layered on top of its own sound (yes, on top).
 🟤 Brown stains, scattered all over the page, for good measure.
 
-Click the note to turn it on. Click it again to turn it off — the page snaps
-right back to boring old human internet. There's a volume slider and a "mute all
-sound" switch in the popup for when you need to be able to hear yourself think.
+Click the saxophone icon to turn it on. Click it again to turn it off — the page
+snaps right back to boring old human internet. There's a volume slider and a
+"mute all sound" switch in the popup for when you need to hear yourself think.
 
 Great for: pranking a friend's laptop, or finding out what the web sounds like
 after three too many.
