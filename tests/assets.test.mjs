@@ -45,22 +45,19 @@ test("bundled stains: manifest lists real transparent-splatter PNGs", () => {
   }
 });
 
-test("bundled audio: scats + farts manifests list real files", () => {
+test("bundled audio: ska + scat + farts manifests list real files", () => {
   const { ScaternetAudioAssets } = runGlobals("src/audio-manifest.js");
   assert.ok(ScaternetAudioAssets && typeof ScaternetAudioAssets === "object");
-  for (const cat of ["music", "video", "scats", "farts"]) {
+  for (const cat of ["ska", "scat", "farts"]) {
     assert.ok(Array.isArray(ScaternetAudioAssets[cat]), `${cat} should be an array`);
     for (const f of ScaternetAudioAssets[cat]) {
       assert.match(f, /\.(mp3|ogg|wav|m4a|webm)$/i, `bad audio name: ${f}`);
       assert.ok(existsSync(join(ROOT, "assets", "audio", cat, f)), `missing ${cat} file: ${f}`);
     }
   }
-  // Click sounds pull from scats OR farts (with a synth fallback), so the pools
-  // are user-curated — only require that clicks have SOMETHING to play.
-  assert.ok(
-    ScaternetAudioAssets.scats.length + ScaternetAudioAssets.farts.length >= 3,
-    `too few click sounds: scats=${ScaternetAudioAssets.scats.length} farts=${ScaternetAudioAssets.farts.length}`
-  );
+  assert.ok(ScaternetAudioAssets.ska.length >= 3, `too few ska bed tracks: ${ScaternetAudioAssets.ska.length}`);
+  assert.ok(ScaternetAudioAssets.scat.length >= 1, `no scat vocal: ${ScaternetAudioAssets.scat.length}`);
+  assert.ok(ScaternetAudioAssets.farts.length >= 3, `too few farts: ${ScaternetAudioAssets.farts.length}`);
 });
 
 test("manifest.json wires content scripts in the right load order", () => {

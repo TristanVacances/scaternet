@@ -32,10 +32,9 @@ writeFileSync(
 );
 
 const audio = {
-  music: list("assets/audio/music", AUD_EXT),
-  video: list("assets/audio/video", AUD_EXT),
-  scats: list("assets/audio/scats", AUD_EXT),
-  farts: list("assets/audio/farts", AUD_EXT),
+  ska: list("assets/audio/ska", AUD_EXT),     // ska/reggae bed (sequential playlist)
+  scat: list("assets/audio/scat", AUD_EXT),   // Tristan's scat vocal (swelled)
+  farts: list("assets/audio/farts", AUD_EXT), // random + click farts
 };
 writeFileSync(
   join(root, "src/audio-manifest.js"),
@@ -44,5 +43,5 @@ writeFileSync(
 );
 
 console.log(
-  `images: ${images.length} | stains: ${stains.length} | music: ${audio.music.length} video: ${audio.video.length} scats: ${audio.scats.length} farts: ${audio.farts.length}`
+  `images: ${images.length} | stains: ${stains.length} | ska: ${audio.ska.length} scat: ${audio.scat.length} farts: ${audio.farts.length}`
 );

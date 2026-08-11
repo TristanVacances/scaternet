@@ -1,19 +1,20 @@
 /*
- * SCATERNET — sound. The web now plays terrible ska.
+ * SCATERNET — sound (v3, per Tristan's plan).
  * Exposes globalThis.ScaternetAudio =
  *   { start, stop, handleMedia, setVolume, setMute, setLayerOverVideos, playClick }.
  *
- *  - A ska+scat+sax MUSIC LOOP starts on the user's first gesture (browsers block
- *    autoplay-with-sound until then) and loops forever. Top frame only, so pages
- *    full of ad-iframes don't spawn 20 overlapping loops.
- *  - Every mouse click fires a one-shot from a weighted pool (~70% scat syllable,
- *    ~30% fart — widest fart spectrum we could bundle). Fresh <audio> each time so
- *    rapid clicks overlap into chaos. 90ms floor stops one physical click double-firing.
- *  - Random fart interjections drop onto the loop every ~8–15s for texture.
- *  - VIDEOS: we do NOT mute them. A ska track is layered ON TOP of the original
- *    audio while it plays, and the page music keeps going = intended 3-way cacophony.
- *  - If a bundled clip can't play, a Web-Audio SYNTH fallback keeps sound alive.
- *  - All bundled clips are chrome-extension:// origin (no network, CSP-safe).
+ * The mix (sparse on purpose — one thing at a time, not a wall):
+ *  - BED: the ska/reggae tracks played back-to-back as a shuffled playlist (one
+ *    at a time, next on 'ended', loops forever). Long and varied, not layered.
+ *  - SCAT VOCAL: Tristan's own scat recording, looping ON TOP, with a volume
+ *    SWELL — sits low so the song breathes, then BLASTS to the ceiling (max, so it
+ *    distorts) for a moment. Cycle timing is randomised each time.
+ *  - FARTS: dropped in randomly on top at random intervals, plus one on every click.
+ *  - VIDEOS: a ska track is layered over each video (original NOT muted).
+ *  - Everything starts on the first user gesture (browser autoplay rule). Music +
+ *    scat + random farts are top-frame only so ad-iframes don't multiply them.
+ *  - Bundled chrome-extension:// audio, no network, CSP-safe. Web-Audio synth
+ *    fallbacks keep sound alive if a clip can't play.
  */
 (function () {
   "use strict";
@@ -22,27 +23,24 @@
     try { return window.top === window; } catch (_e) { return true; }
   })();
 
-  const assets = globalThis.ScaternetAudioAssets || { music: [], video: [], scats: [], farts: [] };
+  const assets = globalThis.ScaternetAudioAssets || { ska: [], scat: [], farts: [] };
 
   let running = false;
   let muted = false;
   let volume = 0.7;
   let layerOverVideos = true;
   let unlocked = false;
-  let musicEls = []; // background loop stems, layered (ska bed + scat vocal + sax)
-  const scatStems = []; // the vocal-scat stems (get the big swell)
-  let swellTimer = null;
-  let swellStep = 0;
-  let trumpetTimer = null;
-  let fartTimer = null;
 
-  // Farts should hit as hard as the sax — punchy, near the top of the mix.
-  function fartVol() { return Math.max(0, Math.min(1, volume * 1.8)); }
+  let bedEl = null;        // the ska playlist element (top frame)
+  let bedQueue = [];       // shuffled ska urls
+  let scatEl = null;       // Tristan's scat vocal (top frame), swelled
+  let swellTimer = null;
+  let fartTimer = null;
   let lastClickAt = 0;
-  const videoTracks = new WeakMap(); // video -> layered <audio>
+  const videoTracks = new WeakMap();
   const wiredMedia = new WeakSet();
 
-  // ---- Web Audio (fallback synth) ----
+  // ---- Web Audio (fallback synth only) ----
   let ctx = null;
   let synthSkaTimer = null;
   function getCtx() {
@@ -59,279 +57,206 @@
     try { return chrome.runtime.getURL("assets/audio/" + sub + "/" + file); }
     catch (_e) { return "assets/audio/" + sub + "/" + file; }
   }
-  function urlsFor(sub, list) {
-    return (list || []).map((f) => extURL(sub, f));
-  }
-  const musicURLs = urlsFor("music", assets.music);
-  const videoURLs = urlsFor("video", assets.video.length ? assets.video : assets.music);
-  const scatURLs = urlsFor("scats", assets.scats);
-  const fartURLs = urlsFor("farts", assets.farts);
+  const skaURLs = (assets.ska || []).map((f) => extURL("ska", f));
+  const scatURLs = (assets.scat || []).map((f) => extURL("scat", f));
+  const fartURLs = (assets.farts || []).map((f) => extURL("farts", f));
 
-  // Warm the cache so the first sound is instant.
+  function pick(a) { return a.length ? a[(Math.random() * a.length) | 0] : null; }
+  function shuffle(a) {
+    const s = a.slice();
+    for (let i = s.length - 1; i > 0; i--) { const j = (Math.random() * (i + 1)) | 0; [s[i], s[j]] = [s[j], s[i]]; }
+    return s;
+  }
   function warm(urls) {
-    for (const u of urls) {
-      try { const a = new Audio(); a.preload = "auto"; a.src = u; } catch (_e) { /* no Audio */ }
-    }
+    for (const u of urls) { try { const a = new Audio(); a.preload = "auto"; a.src = u; } catch (_e) {} }
   }
 
-  function pick(arr) { return arr.length ? arr[(Math.random() * arr.length) | 0] : null; }
+  function clampVol(v) { return Math.max(0, Math.min(1, v)); }
+  function fartVol() { return clampVol(volume * 1.6); } // farts punch like the rest
 
-  // ---- one-shots (clicks + fart interjections) ----
+  // ---- one-shot farts (clicks + random interjections) ----
   function playOneShot(url, vol) {
     if (typeof Audio === "undefined" || !url) return false;
     try {
       const a = new Audio(url);
-      a.volume = Math.max(0, Math.min(1, vol));
+      a.volume = clampVol(vol);
       const p = a.play();
-      if (p && typeof p.catch === "function") p.catch(() => synthScat());
+      if (p && typeof p.catch === "function") p.catch(() => synthFart());
       return true;
     } catch (_e) { return false; }
   }
-
-  // A short cartoon scat blip: a couple of quick pitched bleeps. Fallback only.
-  function synthScat() {
+  function synthFart() {
     const ac = getCtx();
     if (!ac || ac.state !== "running") return;
-    const t = ac.currentTime;
-    const n = 2 + ((Math.random() * 2) | 0);
-    for (let i = 0; i < n; i++) {
-      const osc = ac.createOscillator();
-      osc.type = "square";
-      const f = 220 + Math.random() * 500;
-      osc.frequency.setValueAtTime(f, t + i * 0.09);
-      const g = ac.createGain();
-      g.gain.setValueAtTime(0.0001, t + i * 0.09);
-      g.gain.exponentialRampToValueAtTime(0.18 * volume + 0.001, t + i * 0.09 + 0.01);
-      g.gain.exponentialRampToValueAtTime(0.0001, t + i * 0.09 + 0.08);
-      osc.connect(g).connect(ac.destination);
-      osc.start(t + i * 0.09);
-      osc.stop(t + i * 0.09 + 0.09);
-    }
+    const t = ac.currentTime, dur = 0.35 + Math.random() * 0.3;
+    const src = ac.createBufferSource();
+    const buf = ac.createBuffer(1, Math.floor(ac.sampleRate * dur), ac.sampleRate);
+    const d = buf.getChannelData(0);
+    for (let i = 0; i < d.length; i++) d[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / d.length, 1.5);
+    src.buffer = buf;
+    const bp = ac.createBiquadFilter(); bp.type = "bandpass"; bp.frequency.value = 120 + Math.random() * 120; bp.Q.value = 6;
+    const trem = ac.createGain(); // flutter
+    const lfo = ac.createOscillator(); lfo.frequency.value = 18 + Math.random() * 22;
+    const lg = ac.createGain(); lg.gain.value = 0.5; lfo.connect(lg).connect(trem.gain);
+    const g = ac.createGain(); g.gain.setValueAtTime(0.5 * volume, t); g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+    src.connect(bp).connect(trem).connect(g).connect(ac.destination);
+    lfo.start(t); src.start(t); src.stop(t + dur); lfo.stop(t + dur);
   }
 
   function playClick() {
     if (!running || muted) return;
     const now = Date.now();
-    if (now - lastClickAt < 90) return; // de-dupe a single physical click
+    if (now - lastClickAt < 90) return;
     lastClickAt = now;
-    // ~70% scat, ~30% fart. Farts hit much harder (same as the sax).
-    const useFart = Math.random() < 0.3 && fartURLs.length > 0;
-    const url = useFart ? pick(fartURLs) : (pick(scatURLs) || pick(fartURLs));
-    if (!url) { synthScat(); return; }
-    playOneShot(url, useFart ? fartVol() : volume);
+    const url = pick(fartURLs);
+    if (url) playOneShot(url, fartVol()); else synthFart();
   }
-
   function onPointerDown() { playClick(); }
-
-  // ---- background music loop (top frame only) ----
-  // Layers EVERY stem in assets/audio/music/ at once (ska bed + scat vocal + sax)
-  // = the intended "ska backing + scats + sax solo on top" cacophony. If none can
-  // play, the Web-Audio synth skank keeps a bed going.
-  function startMusic() {
-    if (!isTop || muted) return;
-    if (musicURLs.length === 0) { startSynthSka(); scheduleFarts(); return; }
-    // Keep the mix SPARSE (Tristan: "trop de truc en même temps"): layer only a
-    // small random subset — one instrumental bed (+ maybe a second) and one scat
-    // vocal — not every stem. Different pick each page keeps it varied.
-    const vocals = musicURLs.filter((u) => /scatvox/i.test(u));
-    const instr = musicURLs.filter((u) => !/scatvox/i.test(u));
-    const chosen = [];
-    if (instr.length) {
-      const first = pick(instr);
-      chosen.push(first);
-      const rest = instr.filter((u) => u !== first);
-      if (rest.length && Math.random() < 0.5) chosen.push(pick(rest)); // sometimes a 2nd bed
-    }
-    if (vocals.length) chosen.push(pick(vocals)); // exactly one scat vocal
-    let anyStarted = false;
-    for (const url of chosen) {
-      try {
-        const el = new Audio(url);
-        el.loop = true;
-        const isVocal = /scatvox/i.test(url); // the scat-singing stem
-        el.volume = isVocal ? Math.min(0.85, volume * 0.55) : Math.max(0, Math.min(1, volume));
-        const p = el.play();
-        if (p && typeof p.catch === "function") p.catch(() => {});
-        musicEls.push(el);
-        if (isVocal) scatStems.push(el);
-        anyStarted = true;
-      } catch (_e) { /* skip this stem */ }
-    }
-    if (!anyStarted) startSynthSka();
-    if (scatStems.length) startScatSwell();
-    // Synth trumpet OFF — Tristan wants real trumpet SFX in the bed instead.
-    scheduleFarts();
-  }
-
-  // The scat vocals blast WAY up (out of the mix, near-saturated) for a moment,
-  // then drop right down so the ska song breathes — on a repeating cycle.
-  function startScatSwell() {
-    if (swellTimer) return;
-    swellStep = 0;
-    const CYCLE = 100; // ticks (~10s) per swell
-    swellTimer = setInterval(() => {
-      if (!running || muted || scatStems.length === 0) return;
-      const phase = (swellStep % CYCLE) / CYCLE; // 0..1
-      // ~0.4s ramp up, 3s hold at MAX (distort), ~0.8s fall, then baseline.
-      let env;
-      if (phase < 0.04) env = phase / 0.04;               // blast up
-      else if (phase < 0.34) env = 1;                      // 3s hold — full ceiling
-      else if (phase < 0.42) env = 1 - (phase - 0.34) / 0.08; // fall
-      else env = 0;                                        // baseline, song audible
-      const peak = 1.0; // slam to the absolute ceiling — hot source + overlap = distortion
-      const low = Math.min(0.85, volume * 0.55); // baseline raised (was way too low)
-      const v = Math.max(0, Math.min(1, low + (peak - low) * env));
-      for (const el of scatStems) { try { el.volume = v; } catch (_e) {} }
-      swellStep++;
-    }, 100);
-  }
-  function stopScatSwell() {
-    if (swellTimer) { clearInterval(swellTimer); swellTimer = null; }
-    scatStems.length = 0;
-  }
-
-  // ---- synth STACCATO TRUMPET sections (top frame): flurries of fast short
-  // bright notes, then a pause — layered over the bed for the "trumpet section"
-  // character Tristan asked for, and to keep the loop from feeling short. ----
-  const TRUMPET_SCALE = [392, 440, 494, 523, 587, 659, 698, 784, 880]; // G-ish
-  function trumpetNote(ac, t, dur, f) {
-    const osc = ac.createOscillator();
-    osc.type = "sawtooth";
-    osc.frequency.setValueAtTime(f, t);
-    const bp = ac.createBiquadFilter(); // brassy formant
-    bp.type = "bandpass";
-    bp.frequency.value = Math.min(3200, f * 3);
-    bp.Q.value = 6;
-    const g = ac.createGain();
-    const vol = 0.22 * volume;
-    g.gain.setValueAtTime(0.0001, t);
-    g.gain.exponentialRampToValueAtTime(vol + 0.001, t + 0.008); // sharp staccato attack
-    g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
-    osc.connect(bp).connect(g).connect(ac.destination);
-    osc.start(t);
-    osc.stop(t + dur + 0.02);
-  }
-  function startTrumpet() {
-    if (!isTop || trumpetTimer) return;
-    const burst = () => {
-      if (!running) { trumpetTimer = null; return; }
-      const ac = getCtx();
-      if (!ac || ac.state !== "running" || muted) {
-        trumpetTimer = setTimeout(burst, 1200);
-        return;
-      }
-      const n = 6 + ((Math.random() * 10) | 0); // 6–15 fast notes
-      const noteLen = 0.06 + Math.random() * 0.06;
-      let t = ac.currentTime + 0.02;
-      for (let i = 0; i < n; i++) {
-        const f = TRUMPET_SCALE[(Math.random() * TRUMPET_SCALE.length) | 0] * (Math.random() < 0.25 ? 2 : 1);
-        trumpetNote(ac, t, noteLen, f);
-        t += noteLen * (0.85 + Math.random() * 0.35);
-      }
-      const flurryMs = (t - ac.currentTime) * 1000;
-      const pause = 1600 + Math.random() * 3800; // 1.6–5.4s rest between sections
-      trumpetTimer = setTimeout(burst, flurryMs + pause);
-    };
-    burst();
-  }
-  function stopTrumpet() {
-    if (trumpetTimer) { clearTimeout(trumpetTimer); trumpetTimer = null; }
-  }
-
-  function stopMusic() {
-    for (const el of musicEls) { try { el.pause(); } catch (_e) {} }
-    musicEls = [];
-    stopScatSwell();
-    stopTrumpet();
-    stopSynthSka();
-    if (fartTimer) { clearTimeout(fartTimer); fartTimer = null; }
-  }
 
   function scheduleFarts() {
     if (!isTop) return;
     if (fartTimer) clearTimeout(fartTimer);
-    const delay = 8000 + Math.random() * 7000;
+    const delay = 1500 + Math.random() * 5000; // random interjections
     fartTimer = setTimeout(() => {
       if (running && !muted && fartURLs.length) playOneShot(pick(fartURLs), fartVol());
       scheduleFarts();
     }, delay);
   }
 
-  // Fallback looping "ska" if no music clip can play: offbeat square-wave chords.
+  // ---- ska BED playlist (top frame): one track at a time, sequential, looping ----
+  function nextBedURL() {
+    if (skaURLs.length === 0) return null;
+    if (bedQueue.length === 0) bedQueue = shuffle(skaURLs);
+    return bedQueue.shift();
+  }
+  function playNextBed() {
+    if (!running || muted) return;
+    const url = nextBedURL();
+    if (!url) { startSynthSka(); return; }
+    try {
+      if (!bedEl) {
+        bedEl = new Audio();
+        bedEl.addEventListener("ended", playNextBed);
+        bedEl.addEventListener("error", playNextBed);
+      }
+      bedEl.src = url;
+      bedEl.loop = false;
+      bedEl.volume = clampVol(volume);
+      const p = bedEl.play();
+      if (p && typeof p.catch === "function") p.catch(() => startSynthSka());
+    } catch (_e) { startSynthSka(); }
+  }
+  function stopBed() {
+    if (bedEl) {
+      bedEl.removeEventListener("ended", playNextBed);
+      bedEl.removeEventListener("error", playNextBed);
+      try { bedEl.pause(); } catch (_e) {}
+      bedEl = null;
+    }
+    bedQueue = [];
+    stopSynthSka();
+  }
+
+  // ---- scat vocal (Tristan) with the SWELL ----
+  function startScat() {
+    if (!isTop || scatURLs.length === 0) return;
+    try {
+      scatEl = new Audio(pick(scatURLs));
+      scatEl.loop = true;
+      scatEl.volume = Math.min(0.85, volume * 0.5);
+      const p = scatEl.play();
+      if (p && typeof p.catch === "function") p.catch(() => {});
+    } catch (_e) { scatEl = null; return; }
+    startSwell();
+  }
+  function newCycle() {
+    const lowT = 40 + ((Math.random() * 90) | 0);   // 4–13s baseline (random)
+    const upT = 4;                                    // ~0.4s ramp up
+    const holdT = 15 + ((Math.random() * 30) | 0);   // 1.5–4.5s BLAST (random)
+    const downT = 8;                                  // ~0.8s ramp down
+    return { lowT, upT, holdT, downT, total: lowT + upT + holdT + downT };
+  }
+  function startSwell() {
+    if (swellTimer || !scatEl) return;
+    let cyc = newCycle(), step = 0;
+    swellTimer = setInterval(() => {
+      if (!running || muted || !scatEl) return;
+      let env;
+      if (step < cyc.lowT) env = 0;
+      else if (step < cyc.lowT + cyc.upT) env = (step - cyc.lowT) / cyc.upT;
+      else if (step < cyc.lowT + cyc.upT + cyc.holdT) env = 1;
+      else if (step < cyc.total) env = 1 - (step - cyc.lowT - cyc.upT - cyc.holdT) / cyc.downT;
+      else { cyc = newCycle(); step = 0; env = 0; }
+      const peak = 1.0;                       // slam to the ceiling (distorts)
+      const low = Math.min(0.85, volume * 0.5);
+      try { scatEl.volume = clampVol(low + (peak - low) * env); } catch (_e) {}
+      step++;
+    }, 100);
+  }
+  function stopScat() {
+    if (swellTimer) { clearInterval(swellTimer); swellTimer = null; }
+    if (scatEl) { try { scatEl.pause(); } catch (_e) {} scatEl = null; }
+  }
+
+  // ---- synth ska fallback (only if no ska clip plays) ----
   function startSynthSka() {
     if (!isTop || synthSkaTimer || muted) return;
-    const ac = getCtx();
-    if (!ac) return;
+    const ac = getCtx(); if (!ac) return;
     const chords = [[262, 330, 392], [294, 370, 440], [349, 440, 523], [233, 294, 349]];
     let step = 0;
     synthSkaTimer = setInterval(() => {
       if (!running || muted) return;
-      const ac2 = getCtx();
-      if (!ac2 || ac2.state !== "running") return;
-      // Skank on the offbeat: play a short stab.
+      const ac2 = getCtx(); if (!ac2 || ac2.state !== "running") return;
       if (step % 2 === 1) {
-        const t = ac2.currentTime;
-        const chord = chords[(step >> 1) % chords.length];
+        const t = ac2.currentTime, chord = chords[(step >> 1) % chords.length];
         for (const f of chord) {
-          const o = ac2.createOscillator();
-          o.type = "square";
-          o.frequency.value = f;
+          const o = ac2.createOscillator(); o.type = "square"; o.frequency.value = f;
           const g = ac2.createGain();
           g.gain.setValueAtTime(0.0001, t);
           g.gain.exponentialRampToValueAtTime(0.05 * volume + 0.001, t + 0.01);
           g.gain.exponentialRampToValueAtTime(0.0001, t + 0.16);
-          o.connect(g).connect(ac2.destination);
-          o.start(t); o.stop(t + 0.18);
+          o.connect(g).connect(ac2.destination); o.start(t); o.stop(t + 0.18);
         }
       }
       step++;
     }, 250);
   }
-  function stopSynthSka() {
-    if (synthSkaTimer) { clearInterval(synthSkaTimer); synthSkaTimer = null; }
-  }
+  function stopSynthSka() { if (synthSkaTimer) { clearInterval(synthSkaTimer); synthSkaTimer = null; } }
 
   // ---- unlock on first gesture ----
   function unlock() {
     if (unlocked || !running) return;
     unlocked = true;
     getCtx();
-    startMusic();
+    playNextBed();
+    startScat();
+    scheduleFarts();
     document.removeEventListener("pointerdown", unlock, true);
     document.removeEventListener("keydown", unlock, true);
   }
 
-  // ---- videos: layer, never mute ----
+  // ---- videos: layer a ska track over them, never mute ----
   function startVideoTrack(video) {
     if (!layerOverVideos || muted || videoTracks.has(video)) return;
-    const url = pick(videoURLs);
-    if (!url) return;
+    const url = pick(skaURLs); if (!url) return;
     try {
-      const a = new Audio(url);
-      a.loop = true;
-      a.volume = Math.max(0, Math.min(1, volume));
-      const p = a.play();
-      if (p && typeof p.catch === "function") p.catch(() => {});
+      const a = new Audio(url); a.loop = true; a.volume = clampVol(volume);
+      const p = a.play(); if (p && typeof p.catch === "function") p.catch(() => {});
       videoTracks.set(video, a);
-    } catch (_e) { /* ignore */ }
+    } catch (_e) {}
   }
   function stopVideoTrack(video) {
     const a = videoTracks.get(video);
     if (a) { try { a.pause(); } catch (_e) {} videoTracks.delete(video); }
   }
-
-  function onMediaPlay(e) {
-    if (running && e.target.tagName === "VIDEO") startVideoTrack(e.target);
-  }
+  function onMediaPlay(e) { if (running && e.target.tagName === "VIDEO") startVideoTrack(e.target); }
   function onMediaStop(e) { stopVideoTrack(e.target); }
-
   function wireMedia(el) {
     if (!el || el.tagName !== "VIDEO" || wiredMedia.has(el)) return;
     wiredMedia.add(el);
     el.addEventListener("play", onMediaPlay);
     el.addEventListener("pause", onMediaStop);
     el.addEventListener("ended", onMediaStop);
-    // If it's already playing when we arrive, start immediately.
     if (!el.paused && !el.ended) startVideoTrack(el);
   }
   function handleMedia(el) { if (running) wireMedia(el); }
@@ -346,20 +271,19 @@
       if (typeof opts.muteAudio === "boolean") muted = opts.muteAudio;
       if (typeof opts.layerOverVideos === "boolean") layerOverVideos = opts.layerOverVideos;
     }
-    warm(musicURLs); warm(scatURLs); warm(fartURLs); warm(videoURLs);
+    warm(skaURLs); warm(scatURLs); warm(fartURLs);
     scanMedia();
     document.addEventListener("pointerdown", onPointerDown, true);
-    // First gesture unlocks + starts the music loop.
     document.addEventListener("pointerdown", unlock, true);
     document.addEventListener("keydown", unlock, true);
   }
-
   function stop() {
     running = false;
     document.removeEventListener("pointerdown", onPointerDown, true);
     document.removeEventListener("pointerdown", unlock, true);
     document.removeEventListener("keydown", unlock, true);
-    stopMusic();
+    stopBed(); stopScat();
+    if (fartTimer) { clearTimeout(fartTimer); fartTimer = null; }
     document.querySelectorAll("video").forEach((v) => {
       stopVideoTrack(v);
       v.removeEventListener("play", onMediaPlay);
@@ -367,27 +291,16 @@
       v.removeEventListener("ended", onMediaStop);
     });
   }
-
   function setVolume(v) {
-    volume = Math.max(0, Math.min(1, v));
-    // Scat stems are driven by the swell loop — leave them alone here.
-    for (const el of musicEls) if (scatStems.indexOf(el) === -1) el.volume = volume;
-    document.querySelectorAll("video").forEach((vid) => {
-      const a = videoTracks.get(vid);
-      if (a) a.volume = volume;
-    });
+    volume = clampVol(v);
+    if (bedEl) bedEl.volume = volume; // scat is driven by the swell; leave it
+    document.querySelectorAll("video").forEach((vid) => { const a = videoTracks.get(vid); if (a) a.volume = volume; });
   }
-
   function setMute(m) {
     muted = !!m;
-    if (muted) {
-      stopMusic();
-      document.querySelectorAll("video").forEach(stopVideoTrack);
-    } else if (running && unlocked) {
-      startMusic();
-    }
+    if (muted) { stopBed(); stopScat(); document.querySelectorAll("video").forEach(stopVideoTrack); }
+    else if (running && unlocked) { playNextBed(); startScat(); }
   }
-
   function setLayerOverVideos(v) {
     layerOverVideos = !!v;
     if (!layerOverVideos) document.querySelectorAll("video").forEach(stopVideoTrack);
