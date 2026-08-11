@@ -72,7 +72,8 @@
   }
 
   function clampVol(v) { return Math.max(0, Math.min(1, v)); }
-  function fartVol() { return clampVol(volume * 1.6); } // farts punch like the rest
+  // Farts, turned down 3 dB overall per Tristan (was volume*1.6; 1.6 * 10^(-3/20) ≈ 1.13).
+  function fartVol() { return clampVol(volume * 1.13); }
 
   // ---- one-shot farts (clicks + random interjections) ----
   function playOneShot(url, vol) {
