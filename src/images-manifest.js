@@ -45,5 +45,6 @@ globalThis.ScaternetImagesList = [
   "img-43.jpg",
   "img-44.jpg",
   "img-45.jpg",
-  "img-46.jpg"
+  "img-46.jpg",
+  "img-47.jpg"
 ];
