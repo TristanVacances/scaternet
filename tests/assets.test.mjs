@@ -55,8 +55,12 @@ test("bundled audio: scats + farts manifests list real files", () => {
       assert.ok(existsSync(join(ROOT, "assets", "audio", cat, f)), `missing ${cat} file: ${f}`);
     }
   }
-  assert.ok(ScaternetAudioAssets.scats.length >= 3, `too few scats: ${ScaternetAudioAssets.scats.length}`);
-  assert.ok(ScaternetAudioAssets.farts.length >= 3, `too few farts: ${ScaternetAudioAssets.farts.length}`);
+  // Click sounds pull from scats OR farts (with a synth fallback), so the pools
+  // are user-curated — only require that clicks have SOMETHING to play.
+  assert.ok(
+    ScaternetAudioAssets.scats.length + ScaternetAudioAssets.farts.length >= 3,
+    `too few click sounds: scats=${ScaternetAudioAssets.scats.length} farts=${ScaternetAudioAssets.farts.length}`
+  );
 });
 
 test("manifest.json wires content scripts in the right load order", () => {

@@ -130,12 +130,25 @@
   function startMusic() {
     if (!isTop || muted) return;
     if (musicURLs.length === 0) { startSynthSka(); scheduleFarts(); return; }
+    // Keep the mix SPARSE (Tristan: "trop de truc en même temps"): layer only a
+    // small random subset — one instrumental bed (+ maybe a second) and one scat
+    // vocal — not every stem. Different pick each page keeps it varied.
+    const vocals = musicURLs.filter((u) => /scatvox/i.test(u));
+    const instr = musicURLs.filter((u) => !/scatvox/i.test(u));
+    const chosen = [];
+    if (instr.length) {
+      const first = pick(instr);
+      chosen.push(first);
+      const rest = instr.filter((u) => u !== first);
+      if (rest.length && Math.random() < 0.5) chosen.push(pick(rest)); // sometimes a 2nd bed
+    }
+    if (vocals.length) chosen.push(pick(vocals)); // exactly one scat vocal
     let anyStarted = false;
-    for (const url of musicURLs) {
+    for (const url of chosen) {
       try {
         const el = new Audio(url);
         el.loop = true;
-        const isVocal = /scatvox/i.test(url); // the scat-singing stems
+        const isVocal = /scatvox/i.test(url); // the scat-singing stem
         el.volume = isVocal ? Math.min(0.85, volume * 0.55) : Math.max(0, Math.min(1, volume));
         const p = el.play();
         if (p && typeof p.catch === "function") p.catch(() => {});
@@ -146,7 +159,7 @@
     }
     if (!anyStarted) startSynthSka();
     if (scatStems.length) startScatSwell();
-    startTrumpet();
+    // Synth trumpet OFF — Tristan wants real trumpet SFX in the bed instead.
     scheduleFarts();
   }
 
