@@ -24,8 +24,16 @@ every field value.
 - **Permission justifications:** the two bullets in `store/listing.md`.
 
 ## 3. Privacy
-- **Privacy policy URL:** publish `store/PRIVACY.md` as a public GitHub Gist (as
-  done for CHIENTERNET) and paste the raw URL. (Publishing a gist = your action.)
+- **Privacy policy URL:** `https://tristanvacances.github.io/scaternet/privacy.html`
+  — served from `docs/privacy.html` on `master` via GitHub Pages. A dedicated
+  HTML page whose entire content is the policy.
+  **Verify before pasting** (must print `200` and `text/html`):
+  ```sh
+  curl -s -o /dev/null -w '%{http_code} %{content_type}\n' \
+    https://tristanvacances.github.io/scaternet/privacy.html
+  ```
+  Do **not** substitute the repo root, a `/blob/` URL, or a raw gist URL — the
+  first submission was rejected for exactly this (see "Rejection history" below).
 - **Data usage:** tick **does NOT collect user data**. It makes no network calls.
 - Certify compliance with the Developer Program Policies.
 
@@ -44,6 +52,16 @@ every field value.
   review**, typically days to ~2 weeks for a first submission. This is inherent to
   the product (must run on every page); no manifest change avoids it.
 - Google emails the outcome to bessudo.tristan@gmail.com.
+
+## Rejection history
+- **2026-08-13 — v1.0.0 rejected.** Item ID `mmcecpmjjkijhikeambjgndofacmpgph`,
+  violation ref **Purple Nickel**, routing ID **FZSL**. Sole violation: *"Privacy
+  policy link does not lead to a valid privacy policy."* Nothing else was flagged
+  — `<all_urls>` and the crude humour both passed review.
+  **Cause:** the privacy policy was never published to a public URL (the gist this
+  checklist called for was never created), so the field pointed at something that
+  was not a policy page. **Fix:** GitHub Pages URL in §3 above. Resubmit — do not
+  appeal; an appeal is for reviewer error, and here the link genuinely was wrong.
 
 ## Review-risk notes (honest)
 - **Broad host access** — justified in the listing; the extension has NO
